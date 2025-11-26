@@ -1,0 +1,102 @@
+name: fleet-simulator
+on:
+  push:
+    branches:
+      - main
+      - "release/*"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-lint-test-docker:
+    name: Build → Lint → Test → Dockerize
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: simulator-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      # -----------------------------------------
+      # 1. Checkout code
+      # -----------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------
+      # 2. Setup Go (use modern Go)
+      # -----------------------------------------
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+          cache: true
+
+      # -----------------------------------------
+      # 3. Cache Go modules + build cache
+      # -----------------------------------------
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # -----------------------------------------
+      # 4. Linting with golangci-lint
+      # -----------------------------------------
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v5
+        with:
+          version: latest
+
+      # -----------------------------------------
+      # 5. Static analysis
+      # -----------------------------------------
+      - name: Run go vet
+        run: go vet ./...
+
+      # -----------------------------------------
+      # 6. Run tests (non-blocking until you add real tests)
+      # -----------------------------------------
+      - name: Run tests (placeholder)
+        run: |
+          echo "Running tests (if any exist)"
+          go test ./... || true
+
+      # -----------------------------------------
+      # 7. Build Go binary
+      # -----------------------------------------
+      - name: Build simulator binary
+        run: go build -o simulator ./cmd/simulator
+
+      # -----------------------------------------
+      # 8. Upload binary artifact for debugging
+      # -----------------------------------------
+      - name: Upload built binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-binary
+          path: simulator
+
+      # -----------------------------------------
+      # 9. Docker build (local only — no registry)
+      # -----------------------------------------
+      - name: Build Docker image
+        run: |
+          docker build -t simulator:local .
+
+      # -----------------------------------------
+      # 10. Deployment stub (commented for now)
+      # -----------------------------------------
+      # - name: Deploy service
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     echo "Deployment step not yet configured"
