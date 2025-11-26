@@ -23,9 +23,13 @@ type RouteMap struct {
 	ID            uuid.UUID            `json:"id"`
 	Name          string               `json:"name"`
 	Nodes         []Node               `json:"nodes"`
-	AdjacencyList map[string][]Edge    `json:"adjacency_list"` // nodeID -> []edges (keys are node ID strings)
+	AdjacencyList map[int][]Edge       `json:"adjacency_list"` // node index -> []edges (use integer indices for performance)
 	Routes        []Route              `json:"routes"`
 	CreatedAt     time.Time            `json:"created_at"`
+	// Provenance for reproducible ER generation
+	Seed          int64                `json:"seed"`
+	N             int                  `json:"n"`
+	P             float64              `json:"p"`
 }
 
 type Route struct {
@@ -33,22 +37,22 @@ type Route struct {
 	Name          string       `json:"name"`
 	RouteMapID    uuid.UUID    `json:"route_map_id"`    // FK to RouteMap
 	WaypointIDs   []uuid.UUID  `json:"waypoint_ids"`    // references Node IDs in RouteMap
-	TotalDistance float64      `json:"total_distance"` //KM
+	TotalDistance int64        `json:"total_distance"` //KM (discrete integer distance)
 	EstimatedTime float64      `json:"estimated_time"` // in hours will be sum of edge travel times with some random variation
 	CreatedAt     time.Time    `json:"created_at"`
 }
 
 type Node struct {
 	ID        uuid.UUID  `json:"id"`
-	X         float64    `json:"x"` // discrete coordinate system
-	Y         float64    `json:"y"`
+	X         int64      `json:"x"` // discrete coordinate system (integer grid)
+	Y         int64      `json:"y"`
 	CreatedAt time.Time  `json:"created_at"`
 }
 type Edge struct {
 	ID         uuid.UUID  `json:"id"`
 	FromNodeID uuid.UUID  `json:"from_node_id"`
 	ToNodeID   uuid.UUID  `json:"to_node_id"`
-	Distance   float64    `json:"distance"`    // in KM
+	Distance   int64      `json:"distance"`    // in KM (discrete integer distance)
 	TravelTime float64    `json:"travel_time"` // in hours
 	CreatedAt  time.Time  `json:"created_at"`
 }
