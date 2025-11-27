@@ -20,13 +20,18 @@ type edge struct {
 
 // GenerateNodes creates n random nodes within bounds
 func GenerateNodes(n int) []domain.Node {
+	return GenerateNodesWithBounds(n, 500, 500)
+}
+
+// GenerateNodesWithBounds creates n random nodes within specified width and height
+func GenerateNodesWithBounds(n int, width, height int64) []domain.Node {
 	nodes := make([]domain.Node, n)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < n; i++ {
 		nodes[i] = domain.Node{
 			ID:        uuid.New(),
-			X:         int64(r.Intn(10000)),
-			Y:         int64(r.Intn(10000)),
+			X:         int64(r.Intn(int(width))),
+			Y:         int64(r.Intn(int(height))),
 			CreatedAt: time.Now(),
 		}
 	}
@@ -235,8 +240,12 @@ func triangulationToGraph(nodes []domain.Node, triangles [][]int, pruneThreshold
 // ============================================================================
 
 func GeometricRandomGraphMap(numNodes int, radius float64, seed int64) domain.RouteGraph {
+	return GeometricRandomGraphMapWithBounds(numNodes, radius, 500, 500, seed)
+}
+
+func GeometricRandomGraphMapWithBounds(numNodes int, radius float64, width, height int64, seed int64) domain.RouteGraph {
 	r := rand.New(rand.NewSource(seed))
-	nodes := generateRandomNodes(numNodes, 10000, 10000, r)
+	nodes := generateRandomNodesWithBounds(numNodes, width, height, r)
 	adjacency := geometricRandomGraphConnections(nodes, radius)
 
 	return domain.RouteGraph{
@@ -247,7 +256,7 @@ func GeometricRandomGraphMap(numNodes int, radius float64, seed int64) domain.Ro
 		CreatedAt:     time.Now(),
 		Seed:          seed,
 		N:             numNodes,
-		P:             radius / 10000,
+		P:             radius / float64(width*height),
 	}
 }
 
@@ -262,6 +271,10 @@ func generateRandomNodes(count int, maxX, maxY int64, r *rand.Rand) []domain.Nod
 		}
 	}
 	return nodes
+}
+
+func generateRandomNodesWithBounds(count int, width, height int64, r *rand.Rand) []domain.Node {
+	return generateRandomNodes(count, width, height, r)
 }
 
 func geometricRandomGraphConnections(nodes []domain.Node, radius float64) map[int][]domain.Edge {
@@ -304,8 +317,12 @@ func geometricRandomGraphConnections(nodes []domain.Node, radius float64) map[in
 // ============================================================================
 
 func ErdosRenyiSpatialMap(numNodes int, p float64, maxDistance int64, seed int64) domain.RouteGraph {
+	return ErdosRenyiSpatialMapWithBounds(numNodes, p, maxDistance, 500, 500, seed)
+}
+
+func ErdosRenyiSpatialMapWithBounds(numNodes int, p float64, maxDistance, width, height int64, seed int64) domain.RouteGraph {
 	r := rand.New(rand.NewSource(seed))
-	nodes := generateRandomNodes(numNodes, 10000, 10000, r)
+	nodes := generateRandomNodesWithBounds(numNodes, width, height, r)
 	adjacency := erdosRenyiWithConstraints(nodes, p, maxDistance, r)
 
 	return domain.RouteGraph{
@@ -361,8 +378,12 @@ func erdosRenyiWithConstraints(nodes []domain.Node, p float64, maxDist int64, r 
 // ============================================================================
 
 func RoadLSystemMap(iterations int, seed int64) domain.RouteGraph {
+	return RoadLSystemMapWithBounds(iterations, 500, 500, seed)
+}
+
+func RoadLSystemMapWithBounds(iterations int, width, height int64, seed int64) domain.RouteGraph {
 	r := rand.New(rand.NewSource(seed))
-	nodes, adjacency := generateRoadLSystem(iterations, r)
+	nodes, adjacency := generateRoadLSystemWithBounds(iterations, width, height, r)
 
 	return domain.RouteGraph{
 		ID:            uuid.New(),
@@ -376,22 +397,30 @@ func RoadLSystemMap(iterations int, seed int64) domain.RouteGraph {
 	}
 }
 
-func generateRoadLSystem(iterations int, r *rand.Rand) ([]domain.Node, map[int][]domain.Edge) {
+func generateRoadLSystemWithBounds(iterations int, width, height int64, r *rand.Rand) ([]domain.Node, map[int][]domain.Edge) {
 	nodes := []domain.Node{}
 	edges := []edge{}
+	centerX := float64(width) / 2.0
+	centerY := float64(height) / 2.0
 	segments := []struct{ x, y, angle float64 }{
-		{5000, 5000, 0},
-		{5000, 5000, math.Pi / 2},
-		{5000, 5000, math.Pi},
-		{5000, 5000, 3 * math.Pi / 2},
+		{centerX, centerY, 0},
+		{centerX, centerY, math.Pi / 2},
+		{centerX, centerY, math.Pi},
+		{centerX, centerY, 3 * math.Pi / 2},
 	}
 
 	for iter := 0; iter < iterations; iter++ {
 		newSegments := []struct{ x, y, angle float64 }{}
+		maxLength := math.Min(float64(width), float64(height)) / (2 * math.Pow(1.5, float64(iter)+1))
+		
 		for _, seg := range segments {
-			length := 500.0 / math.Pow(1.5, float64(iter))
+			length := maxLength
 			endX := seg.x + length*math.Cos(seg.angle)
 			endY := seg.y + length*math.Sin(seg.angle)
+
+			// Clamp to bounds
+			endX = math.Max(0, math.Min(float64(width), endX))
+			endY = math.Max(0, math.Min(float64(height), endY))
 
 			fromIdx := len(nodes)
 			nodes = append(nodes, domain.Node{
@@ -438,8 +467,12 @@ func generateRoadLSystem(iterations int, r *rand.Rand) ([]domain.Node, map[int][
 // ============================================================================
 
 func MSTWithExtraEdgesMap(numNodes int, extraEdgesRatio float64, seed int64) domain.RouteGraph {
+	return MSTWithExtraEdgesMapWithBounds(numNodes, extraEdgesRatio, 500, 500, seed)
+}
+
+func MSTWithExtraEdgesMapWithBounds(numNodes int, extraEdgesRatio float64, width, height int64, seed int64) domain.RouteGraph {
 	r := rand.New(rand.NewSource(seed))
-	nodes := generateRandomNodes(numNodes, 10000, 10000, r)
+	nodes := generateRandomNodesWithBounds(numNodes, width, height, r)
 	adjacency := mstWithExtraConnections(nodes, extraEdgesRatio, r)
 
 	return domain.RouteGraph{
@@ -455,7 +488,6 @@ func MSTWithExtraEdgesMap(numNodes int, extraEdgesRatio float64, seed int64) dom
 }
 
 func mstWithExtraConnections(nodes []domain.Node, extraRatio float64, r *rand.Rand) map[int][]domain.Edge {
-	// Build complete graph
 	allEdges := []edge{}
 	for i := 0; i < len(nodes); i++ {
 		for j := i + 1; j < len(nodes); j++ {
@@ -464,7 +496,6 @@ func mstWithExtraConnections(nodes []domain.Node, extraRatio float64, r *rand.Ra
 		}
 	}
 
-	// Kruskal's algorithm for MST
 	sort.Slice(allEdges, func(i, j int) bool { return allEdges[i].dist < allEdges[j].dist })
 	parent := make([]int, len(nodes))
 	for i := range parent {
@@ -490,7 +521,6 @@ func mstWithExtraConnections(nodes []domain.Node, extraRatio float64, r *rand.Ra
 		}
 	}
 
-	// Add extra random edges
 	numExtra := int(float64(len(mstEdges)) * extraRatio)
 	for i := 0; i < numExtra && len(allEdges) > 0; i++ {
 		idx := r.Intn(len(allEdges))
@@ -498,7 +528,6 @@ func mstWithExtraConnections(nodes []domain.Node, extraRatio float64, r *rand.Ra
 		allEdges = append(allEdges[:idx], allEdges[idx+1:]...)
 	}
 
-	// Convert to adjacency list
 	adjacency := make(map[int][]domain.Edge)
 	for _, e := range mstEdges {
 		edgeObj := domain.Edge{
@@ -525,10 +554,14 @@ func mstWithExtraConnections(nodes []domain.Node, extraRatio float64, r *rand.Ra
 // ============================================================================
 
 func VoronoiGraphMap(numSeeds int, gridResolution int, seed int64) domain.RouteGraph {
+	return VoronoiGraphMapWithBounds(numSeeds, gridResolution, 500, 500, seed)
+}
+
+func VoronoiGraphMapWithBounds(numSeeds int, gridResolution int, width, height int64, seed int64) domain.RouteGraph {
 	r := rand.New(rand.NewSource(seed))
-	nodes := generateRandomNodes(numSeeds, 10000, 10000, r)
-	voronoiCells := computeVoronoiDiagram(nodes, gridResolution)
-	adjacency := voronoiToGraph(nodes, voronoiCells)
+	nodes := generateRandomNodesWithBounds(numSeeds, width, height, r)
+	voronoiCells := computeVoronoiDiagramWithBounds(nodes, gridResolution, width, height)
+	adjacency := voronoiToGraphWithBounds(nodes, voronoiCells, width, height)
 
 	return domain.RouteGraph{
 		ID:            uuid.New(),
@@ -542,30 +575,35 @@ func VoronoiGraphMap(numSeeds int, gridResolution int, seed int64) domain.RouteG
 	}
 }
 
-func computeVoronoiDiagram(nodes []domain.Node, resolution int) [][]int {
+
+func computeVoronoiDiagramWithBounds(nodes []domain.Node, resolution int, width, height int64) [][]int {
 	cells := make([][]int, len(nodes))
 	for i := range cells {
 		cells[i] = []int{}
 	}
 
-	for x := 0; x < 10000; x += resolution {
-		for y := 0; y < 10000; y += resolution {
+	for x := int64(0); x < width; x += int64(resolution) {
+		for y := int64(0); y < height; y += int64(resolution) {
 			minDist := math.MaxFloat64
 			closestSeed := 0
 			for i, node := range nodes {
-				dist := euclideanDistance(int64(x), int64(y), node.X, node.Y)
+				dist := euclideanDistance(x, y, node.X, node.Y)
 				if float64(dist) < minDist {
 					minDist = float64(dist)
 					closestSeed = i
 				}
 			}
-			cells[closestSeed] = append(cells[closestSeed], x*10000+y)
+			cells[closestSeed] = append(cells[closestSeed], int(x*height+y))
 		}
 	}
 	return cells
 }
 
 func voronoiToGraph(nodes []domain.Node, cells [][]int) map[int][]domain.Edge {
+	return voronoiToGraphWithBounds(nodes, cells, 500, 500)
+}
+
+func voronoiToGraphWithBounds(nodes []domain.Node, cells [][]int, width, height int64) map[int][]domain.Edge {
 	adjacency := make(map[int][]domain.Edge)
 	cellNeighbors := make(map[int]map[int]bool)
 
@@ -575,16 +613,16 @@ func voronoiToGraph(nodes []domain.Node, cells [][]int) map[int][]domain.Edge {
 
 	for i, cellA := range cells {
 		for _, coordA := range cellA {
-			x1 := coordA / 10000
-			y1 := coordA % 10000
+			x1 := int64(coordA / int(height))
+			y1 := int64(coordA % int(height))
 			for j, cellB := range cells {
 				if i == j {
 					continue
 				}
 				for _, coordB := range cellB {
-					x2 := coordB / 10000
-					y2 := coordB % 10000
-					if abs(int64(x1-x2)) <= 1 && abs(int64(y1-y2)) <= 1 {
+					x2 := int64(coordB / int(height))
+					y2 := int64(coordB % int(height))
+					if abs(x1-x2) <= 1 && abs(y1-y2) <= 1 {
 						cellNeighbors[i][j] = true
 					}
 				}
@@ -618,28 +656,32 @@ func voronoiToGraph(nodes []domain.Node, cells [][]int) map[int][]domain.Edge {
 // ============================================================================
 
 func PickMapByAlgorithm(algorithm int, seed int64) domain.RouteGraph {
+	return PickMapByAlgorithmWithBounds(algorithm, 500, 500, seed)
+}
+
+func PickMapByAlgorithmWithBounds(algorithm int, width, height int64, seed int64) domain.RouteGraph {
 	switch algorithm {
 	case 1:
-		return PoissonDiscSamplingMap(10000, 10000, 500, seed, 2000)
+		return PoissonDiscSamplingMap(width, height, 50, seed, 150)
 
 	case 2:
-		return GeometricRandomGraphMap(50, 2000, seed)
+		return GeometricRandomGraphMapWithBounds(30, 120, width, height, seed)
 
 	case 3:
-		return ErdosRenyiSpatialMap(50, 0.1, 3000, seed)
+		return ErdosRenyiSpatialMapWithBounds(30, 0.15, 200, width, height, seed)
 
 	case 4:
-		return RoadLSystemMap(5, seed)
+		return RoadLSystemMapWithBounds(4, width, height, seed)
 
 	case 5:
-		return MSTWithExtraEdgesMap(60, 0.2, seed)
+		return MSTWithExtraEdgesMapWithBounds(40, 0.25, width, height, seed)
 
 	case 6:
-		return VoronoiGraphMap(25, 200, seed)
+		return VoronoiGraphMapWithBounds(15, 20, width, height, seed)
 
 	default:
 		// Default to algorithm 2
-		return GeometricRandomGraphMap(50, 2000, seed)
+		return GeometricRandomGraphMapWithBounds(30, 120, width, height, seed)
 	}
 }
 
