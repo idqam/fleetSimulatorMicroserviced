@@ -17,6 +17,8 @@ type Vehicle struct {
 	NextWaypointID    *uuid.UUID
 	CurrentEdgeID     *uuid.UUID
 	EdgeProgress      float64
+	PosX             float64
+	PosY             float64
 	CreatedAt         time.Time
 	Status            string
 }

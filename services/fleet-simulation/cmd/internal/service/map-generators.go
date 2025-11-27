@@ -11,8 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-
-
 type edge struct {
 	from, to int
 	dist     float64
@@ -412,7 +410,7 @@ func generateRoadLSystemWithBounds(iterations int, width, height int64, r *rand.
 	for iter := 0; iter < iterations; iter++ {
 		newSegments := []struct{ x, y, angle float64 }{}
 		maxLength := math.Min(float64(width), float64(height)) / (2 * math.Pow(1.5, float64(iter)+1))
-		
+
 		for _, seg := range segments {
 			length := maxLength
 			endX := seg.x + length*math.Cos(seg.angle)
@@ -575,7 +573,6 @@ func VoronoiGraphMapWithBounds(numSeeds int, gridResolution int, width, height i
 	}
 }
 
-
 func computeVoronoiDiagramWithBounds(nodes []domain.Node, resolution int, width, height int64) [][]int {
 	cells := make([][]int, len(nodes))
 	for i := range cells {
@@ -597,10 +594,6 @@ func computeVoronoiDiagramWithBounds(nodes []domain.Node, resolution int, width,
 		}
 	}
 	return cells
-}
-
-func voronoiToGraph(nodes []domain.Node, cells [][]int) map[int][]domain.Edge {
-	return voronoiToGraphWithBounds(nodes, cells, 500, 500)
 }
 
 func voronoiToGraphWithBounds(nodes []domain.Node, cells [][]int, width, height int64) map[int][]domain.Edge {
@@ -655,8 +648,8 @@ func voronoiToGraphWithBounds(nodes []domain.Node, cells [][]int, width, height 
 // Map Picker Method - Select Algorithm by Number (1-6)
 // ============================================================================
 
-func PickMapByAlgorithm(algorithm int, seed int64) domain.RouteGraph {
-	return PickMapByAlgorithmWithBounds(algorithm, 500, 500, seed)
+func PickMapByAlgorithm(algorithm int, width, height int64, seed int64) domain.RouteGraph {
+	return PickMapByAlgorithmWithBounds(algorithm, width, height, seed)
 }
 
 func PickMapByAlgorithmWithBounds(algorithm int, width, height int64, seed int64) domain.RouteGraph {
@@ -680,7 +673,6 @@ func PickMapByAlgorithmWithBounds(algorithm int, width, height int64, seed int64
 		return VoronoiGraphMapWithBounds(15, 20, width, height, seed)
 
 	default:
-		// Default to algorithm 2
 		return GeometricRandomGraphMapWithBounds(30, 120, width, height, seed)
 	}
 }
